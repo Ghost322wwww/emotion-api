@@ -16,9 +16,10 @@ LASTFM_API_KEY = "ed823d59db776e6c09055d838788e9fe"
 # ========================
 emotion_model = pipeline(
     "text-classification",
-    model="j-hartmann/emotion-english-distilroberta-base",
+    model="bhadresh-savani/distilbert-base-uncased-emotion",
     top_k=None
 )
+
 
 # ========================
 # 🌐 Translate Chinese to English
@@ -44,14 +45,14 @@ def detect_emotion(text):
 def map_emotion_to_tag(emotion):
     mapping = {
         'joy': 'happy',
+        'love': 'romantic',
         'sadness': 'sad',
         'anger': 'angry',
         'fear': 'dark',
-        'surprise': 'upbeat',
-        'disgust': 'metal',
-        'neutral': 'chill'
+        'surprise': 'upbeat'
     }
     return mapping.get(emotion, 'chill')
+
 
 # ========================
 # 🧠 Flask API Endpoint
