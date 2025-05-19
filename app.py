@@ -2,6 +2,7 @@ from transformers import pipeline
 from deep_translator import GoogleTranslator
 import requests
 import gradio as gr
+import random
 
 # 🎯 載入情緒模型
 emotion_model = pipeline(
@@ -37,37 +38,64 @@ def map_emotion_to_tag(emotion):
     }
     return mapping.get(emotion, 'chill')
 
-# 🎯 主邏輯：輸入文字 → 回傳情緒 + 推薦歌曲
-def recommend(text):
-    translated = translate_to_english(text)
-    emotion, confidence = detect_emotion(translated)
-    tag = map_emotion_to_tag(emotion)
+# 🎯 主邏輯
+def recommend(text, style):
+    # 預設初始值
+    emotion = None
+    confidence = None
+    emotion_tag = ""
+    style_tag = style.strip().lower() if style else ""
 
+    # 有輸入心情就分析
+    if text.strip():
+        translated = translate_to_english(text)
+        emotion, confidence = detect_emotion(translated)
+        emotion_tag = map_emotion_to_tag(emotion)
+
+    # 組合查詢 tag
+    tag_parts = [tag for tag in [emotion_tag, style_tag] if tag]
+    if not tag_parts:
+        return "⚠️ Please enter at least one mood or select a style."
+
+    final_tag = " ".join(tag_parts)
+
+    # 呼叫 Last.fm API
     url = "http://ws.audioscrobbler.com/2.0/"
     params = {
         'method': 'tag.gettoptracks',
-        'tag': tag,
+        'tag': final_tag,
         'api_key': LASTFM_API_KEY,
         'format': 'json',
-        'limit': 5
+        'limit': 30
     }
 
     response = requests.get(url, params=params)
     data = response.json()
     tracks = data.get('tracks', {}).get('track', [])
+    random.shuffle(tracks)
+    tracks = tracks[:5]
 
     if not tracks:
-        return f"Emotion: {emotion} (confidence: {confidence})\n\n😕 沒有找到歌曲"
+        return f"🫤 No matching songs found (tag: {final_tag})"
 
     songs = "\n".join([f"🎵 {t['name']} - {t['artist']['name']}" for t in tracks])
-    return f"Emotion: {emotion} (confidence: {confidence})\n\n🎶 推薦歌曲：\n{songs}"
+    emotion_info = f"Emotion: {emotion} (confidence: {confidence})\n" if emotion else ""
+    return f"{emotion_info}\n🎶 Recommended songs:\n{songs}"
 
 # 🎛️ Gradio UI
 interface = gr.Interface(
     fn=recommend,
-    inputs=gr.Textbox(label="🧠 Please enter your mood (Chinese is acceptable)"),
+    inputs=[
+        gr.Textbox(label="🧠 Please enter your mood (optional)"),
+        gr.Dropdown(
+            choices=["", "rock", "pop", "jazz", "hip-hop", "electronic", "classical", "chill"],
+            label="🎼 Select a style (optional)",
+            value=""
+        )
+    ],
     outputs=gr.Textbox(label="🎵 AI recommendation results"),
-    title="🎧 AI music mood recommendation",
-    description="Enter your mood, AI will judge your mood and recommend songs (Chinese is also OK)"
+    title="🎧 Mood and style music recommendation",
+    description="You can enter only the mood, only the genre, or both, and AI will randomly recommend 5 songs"
 )
+
 interface.launch()
