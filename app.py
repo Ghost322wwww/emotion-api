@@ -98,4 +98,5 @@ interface = gr.Interface(
     description="You can enter only the mood, only the genre, or both, and AI will randomly recommend 5 songs"
 )
 
-interface.launch()
+interface.launch(enable_queue=True)
+
