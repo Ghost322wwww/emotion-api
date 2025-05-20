@@ -11,7 +11,7 @@ emotion_model = pipeline(
     top_k=None
 )
 
-# 🔑 Last.fm API 金鑰（正式請改環境變數）
+# 🔑 Last.fm API 金鑰
 LASTFM_API_KEY = "ed823d59db776e6c09055d838788e9fe"
 
 # 🌐 中文翻譯
@@ -40,26 +40,22 @@ def map_emotion_to_tag(emotion):
 
 # 🎯 主邏輯
 def recommend(text, style):
-    # 預設初始值
     emotion = None
     confidence = None
     emotion_tag = ""
     style_tag = style.strip().lower() if style else ""
 
-    # 有輸入心情就分析
     if text.strip():
         translated = translate_to_english(text)
         emotion, confidence = detect_emotion(translated)
         emotion_tag = map_emotion_to_tag(emotion)
 
-    # 組合查詢 tag
     tag_parts = [tag for tag in [emotion_tag, style_tag] if tag]
     if not tag_parts:
         return "⚠️ Please enter at least one mood or select a style."
 
     final_tag = " ".join(tag_parts)
 
-    # 呼叫 Last.fm API
     url = "http://ws.audioscrobbler.com/2.0/"
     params = {
         'method': 'tag.gettoptracks',
@@ -82,21 +78,21 @@ def recommend(text, style):
     emotion_info = f"Emotion: {emotion} (confidence: {confidence})\n" if emotion else ""
     return f"{emotion_info}\n🎶 Recommended songs:\n{songs}"
 
-# 🎛️ Gradio UI
-interface = gr.Interface(
-    fn=recommend,
-    inputs=[
-        gr.Textbox(label="🧠 Please enter your mood (optional)"),
-        gr.Dropdown(
-            choices=["", "rock", "pop", "jazz", "hip-hop", "electronic", "classical", "chill"],
-            label="🎼 Select a style (optional)",
-            value=""
-        )
-    ],
-    outputs=gr.Textbox(label="🎵 AI recommendation results"),
-    title="🎧 Mood and style music recommendation",
-    description="You can enter only the mood, only the genre, or both, and AI will randomly recommend 5 songs"
-)
+# 🎛️ Gradio Blocks UI
+with gr.Blocks() as interface:
+    gr.Markdown("# 🎧 Mood and style music recommendation")
+    gr.Markdown("You can enter only the mood, only the genre, or both, and AI will randomly recommend 5 songs")
 
-interface.launch(enable_queue=True)
+    mood = gr.Textbox(label="🧠 Please enter your mood (optional)")
+    genre = gr.Dropdown(
+        choices=["", "rock", "pop", "jazz", "hip-hop", "electronic", "classical", "chill"],
+        label="🎼 Select a style (optional)",
+        value=""
+    )
+    output = gr.Textbox(label="🎵 AI recommendation results")
+    button = gr.Button("Recommend")
 
+    button.click(fn=recommend, inputs=[mood, genre], outputs=output)
+
+interface.queue()
+interface.launch()

@@ -1,5 +1,6 @@
+gradio==3.50.2
 transformers==4.40.1
 torch
 deep-translator
 requests
-gradio==3.50.2
+
